@@ -5,6 +5,7 @@
  * @copyright  taskPHP
  * @license    https://gitee.com/cqcqphper/taskPHP
  */
+
 namespace taskphp\queue\drives;
 
 /**
@@ -16,41 +17,51 @@ namespace taskphp\queue\drives;
  * 使用场景:
  * 1 环境中有redis，业务不需要ack
  */
-class Redis{
+class Redis
+{
 
     /**
      * 设置属性
      * @var array
      */
-    private  $_options=[
-        'prefix'=>'queue',
-        'host'=>'127.0.0.1',
-        'port'=>'6379',
-        'password'   => '',
-        'index' => ''
+    private $_options = [
+        'prefix' => 'queue',
+        'host' => '127.0.0.1',
+        'port' => '6379',
+        'password' => '',
+        'index' => 0,
+        'persistent' => false,
+        'timeout' => 0
     ];
 
     /**
      * @var \Redis
      */
     private $redis;
+
     /**
      * RedisQueue constructor.
      * @param string $queue_name
      * @param array $config
      */
-    public function __construct(array $options = []){
-        if(!extension_loaded('redis')){
-            \taskphp\Console::log('ERROR:redis module has not been opened');die;
+    public function __construct(array $options = [])
+    {
+        if (!extension_loaded('redis')) {
+            \taskphp\Console::log('ERROR:redis module has not been opened');
+            die;
         }
-        $this->_options = array_merge($this->_options,$options);
+        $this->_options = array_merge($this->_options, $options);
         $this->redis = new \Redis();
-        $this->redis->connect($this->_options['host'],$this->_options['port']);
+        if ($this->_options['persistent']) {
+            $this->redis->pconnect($this->_options['host'], $this->_options['port'], $this->_options['timeout'], 'persistent_id_' . $this->_options['index']);
+        } else {
+            $this->redis->connect($this->_options['host'], $this->_options['port']);
+        }
         if ('' != $this->_options['password']) {
             $this->redis->auth($this->_options['password']);
         }
 
-        if ('' != $this->_options['index']) {
+        if (0 != $this->_options['index']) {
             $this->redis->select($this->_options['index']);
         }
     }
@@ -61,9 +72,10 @@ class Redis{
      * @param string $name 缓存变量名
      * @return mixed
      */
-    public function get($name = false) {
-        $value    = $this->redis->get($this->_options['prefix'] . $name);
-        $value=unserialize($value);
+    public function get($name = false)
+    {
+        $value = $this->redis->get($this->_options['prefix'] . $name);
+        $value = unserialize($value);
         return $value;
     }
 
@@ -71,12 +83,13 @@ class Redis{
      * 写入缓存
      * @access public
      * @param string $name 缓存变量名
-     * @param mixed $value  存储数据
+     * @param mixed $value 存储数据
      * @return boolen
      */
-    public function set($name, $value) {
+    public function set($name, $value)
+    {
         $name = $this->_options['prefix'] . $name;
-        $value=serialize($value);
+        $value = serialize($value);
         $result = $this->redis->set($name, $value);
         return $result;
     }
@@ -87,7 +100,8 @@ class Redis{
      * @param string $name 缓存变量名
      * @return boolen
      */
-    public function rm($name) {
+    public function rm($name)
+    {
         return $this->redis->delete($this->_options['prefix'] . $name);
     }
 
@@ -96,35 +110,39 @@ class Redis{
      * @param string $key 表头
      * @param string $value 值
      */
-    public function push($key,$value){
-        $data= (array) $this->get($key);
-        array_push($data,$value);
+    public function push($key, $value)
+    {
+        $data = (array)$this->get($key);
+        array_push($data, $value);
         return $this->set($key, $data);
     }
+
     /**
      * 出列 堵塞 当没有数据的时候，会一直等待下去
      * @param string $key 表头
      * @param number $timeout 延时   0无限等待
      * @return Ambigous <NULL, mixed>
      */
-    public function pop($key,$timeout=0){
-        $res=null;
-        $wh=true;$second=0;
-        while ($wh){
-            $data= (array) $this->get($key);
-            if(count($data)!=0){
-                $res=array_shift($data);
+    public function pop($key, $timeout = 0)
+    {
+        $res = null;
+        $wh = true;
+        $second = 0;
+        while ($wh) {
+            $data = (array)$this->get($key);
+            if (count($data) != 0) {
+                $res = array_shift($data);
                 $this->set($key, $data);
-                $wh=false;
+                $wh = false;
                 break;
             }
 
-            if($timeout==0){
+            if ($timeout == 0) {
                 sleep(1);
-            }elseif($timeout>0 && $second<$timeout){
+            } elseif ($timeout > 0 && $second < $timeout) {
                 sleep(1);
                 $second++;
-            }else{
+            } else {
                 break;
             }
         }
@@ -137,13 +155,14 @@ class Redis{
      * @param unknown $son_key
      * @return boolean
      */
-    public function srem($key,$son_key){
-        $data= (array) $this->get($key);
-        if(!count($data)){
+    public function srem($key, $son_key)
+    {
+        $data = (array)$this->get($key);
+        if (!count($data)) {
             return false;
         }
-        foreach ($data as $k=>$v){
-            if($v==$son_key){
+        foreach ($data as $k => $v) {
+            if ($v == $son_key) {
                 unset($data[$k]);
             }
         }
@@ -156,7 +175,8 @@ class Redis{
      * @access public
      * @return boolean
      */
-    public function clear(){
+    public function clear()
+    {
         return $this->redis->flushDB();
     }
 }
