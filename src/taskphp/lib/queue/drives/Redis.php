@@ -27,6 +27,7 @@ class Redis{
         'host'=>'127.0.0.1',
         'port'=>'6379',
         'password'   => '',
+        'index' => ''
     ];
 
     /**
@@ -47,6 +48,10 @@ class Redis{
         $this->redis->connect($this->_options['host'],$this->_options['port']);
         if ('' != $this->_options['password']) {
             $this->redis->auth($this->_options['password']);
+        }
+
+        if ('' != $this->_options['index']) {
+            $this->redis->select($this->_options['index']);
         }
     }
 
