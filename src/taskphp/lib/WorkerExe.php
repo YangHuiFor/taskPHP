@@ -48,7 +48,7 @@ class WorkerExe{
 	    Utils::log('worker_listen daemon pid:'.getmypid().' Start');
 		$taskManage=new TaskManage();
 		register_shutdown_function([$this,'shutdown_function']);
-		while (Utils::cache('listen'.$task_name)=='true'){
+		while (true){
 			$this->_worker=Queue::pop(static::$_worker_exec.$task_name);//取出队列
 			if(!$this->_worker){
 			    continue;
