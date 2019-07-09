@@ -45,7 +45,7 @@ class WorkerExe{
 	public function listen($task_name){
 	    $config=Utils::config('task_list.'.$task_name);
 	    ini_set('memory_limit',$config['worker_memory']);
-	    Utils::log('worker_listen daemon pid:'.getmypid().' Start');
+	    Utils::log('workerName:'.$task_name.'worker_listen daemon pid:'.getmypid().' Start');
 		$taskManage=new TaskManage();
 		register_shutdown_function([$this,'shutdown_function']);
 		while (true){
