@@ -102,7 +102,7 @@ class Redis
      */
     public function rm($name)
     {
-        return $this->redis->delete($this->_options['prefix'] . $name);
+        return $this->redis->del($this->_options['prefix'] . $name);
     }
 
     /**
